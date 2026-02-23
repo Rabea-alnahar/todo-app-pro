@@ -8,7 +8,7 @@ const authed = computed(() => isAuthed());
 
 function logout() {
   clearToken();
-  router.replace("/login");
+  router.push("/login");
 }
 </script>
 
@@ -17,6 +17,7 @@ function logout() {
     <header class="border-b bg-white">
       <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         <div class="font-semibold">Todo App</div>
+
         <nav class="flex items-center gap-3">
           <RouterLink class="text-sm hover:underline" to="/projects">Projects</RouterLink>
 

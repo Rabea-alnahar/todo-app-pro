@@ -22,11 +22,18 @@ const newTitle = ref("");
 const newDesc = ref("");
 const creating = ref(false);
 
+// edit modal
+const isEditOpen = ref(false);
+const editId = ref<string | null>(null);
+const editTitle = ref("");
+const editDesc = ref("");
+const saving = ref(false);
+
 function sortTodos(list: Todo[]) {
   return [...list].sort((a, b) => {
     const pr = (b.priority ?? 0) - (a.priority ?? 0); // higher priority first
     if (pr !== 0) return pr;
-    return a.title.localeCompare(b.title); // stable tie-breaker
+    return a.title.localeCompare(b.title); // tie-breaker
   });
 }
 
@@ -87,6 +94,41 @@ async function remove(todo: Todo) {
   }
 }
 
+function openEdit(todo: Todo) {
+  editId.value = todo.id;
+  editTitle.value = todo.title ?? "";
+  editDesc.value = todo.description ?? "";
+  isEditOpen.value = true;
+  error.value = null;
+}
+
+function closeEdit() {
+  isEditOpen.value = false;
+  editId.value = null;
+  editTitle.value = "";
+  editDesc.value = "";
+}
+
+async function saveEdit() {
+  if (!editId.value) return;
+  if (!editTitle.value.trim()) return;
+
+  saving.value = true;
+  error.value = null;
+  try {
+    await api.patch(`/todos/${editId.value}`, {
+      title: editTitle.value.trim(),
+      description: editDesc.value.trim() || null,
+    });
+    closeEdit();
+    await load();
+  } catch (e: any) {
+    error.value = e?.response?.data?.message ?? "Failed to save todo";
+  } finally {
+    saving.value = false;
+  }
+}
+
 onMounted(load);
 </script>
 
@@ -140,14 +182,20 @@ onMounted(load);
       <section class="rounded-xl border bg-white p-4">
         <h2 class="font-semibold">OPEN</h2>
 
-        <div class="mt-3 space-y-2">
+        <div v-if="loading" class="mt-3 text-sm text-slate-600">Loading...</div>
+
+        <div v-else class="mt-3 space-y-2">
           <div v-for="t in openTodos" :key="t.id" class="rounded-md border p-3">
             <div class="flex items-start justify-between gap-2">
               <div>
                 <div class="font-medium">{{ t.title }}</div>
                 <div v-if="t.description" class="mt-1 text-sm text-slate-600">{{ t.description }}</div>
               </div>
-              <button class="text-sm text-red-600 hover:underline" @click="remove(t)">Delete</button>
+
+              <div class="flex items-center gap-3">
+                <button class="text-sm text-slate-700 hover:underline" @click="openEdit(t)">Edit</button>
+                <button class="text-sm text-red-600 hover:underline" @click="remove(t)">Delete</button>
+              </div>
             </div>
 
             <div class="mt-3 flex gap-2">
@@ -159,6 +207,8 @@ onMounted(load);
               </button>
             </div>
           </div>
+
+          <p v-if="openTodos.length === 0" class="mt-3 text-sm text-slate-600">No OPEN todos.</p>
         </div>
       </section>
 
@@ -166,14 +216,20 @@ onMounted(load);
       <section class="rounded-xl border bg-white p-4">
         <h2 class="font-semibold">IN PROGRESS</h2>
 
-        <div class="mt-3 space-y-2">
+        <div v-if="loading" class="mt-3 text-sm text-slate-600">Loading...</div>
+
+        <div v-else class="mt-3 space-y-2">
           <div v-for="t in inProgressTodos" :key="t.id" class="rounded-md border p-3">
             <div class="flex items-start justify-between gap-2">
               <div>
                 <div class="font-medium">{{ t.title }}</div>
                 <div v-if="t.description" class="mt-1 text-sm text-slate-600">{{ t.description }}</div>
               </div>
-              <button class="text-sm text-red-600 hover:underline" @click="remove(t)">Delete</button>
+
+              <div class="flex items-center gap-3">
+                <button class="text-sm text-slate-700 hover:underline" @click="openEdit(t)">Edit</button>
+                <button class="text-sm text-red-600 hover:underline" @click="remove(t)">Delete</button>
+              </div>
             </div>
 
             <div class="mt-3 flex gap-2">
@@ -185,6 +241,8 @@ onMounted(load);
               </button>
             </div>
           </div>
+
+          <p v-if="inProgressTodos.length === 0" class="mt-3 text-sm text-slate-600">No IN PROGRESS todos.</p>
         </div>
       </section>
 
@@ -192,14 +250,20 @@ onMounted(load);
       <section class="rounded-xl border bg-white p-4">
         <h2 class="font-semibold">DONE</h2>
 
-        <div class="mt-3 space-y-2">
+        <div v-if="loading" class="mt-3 text-sm text-slate-600">Loading...</div>
+
+        <div v-else class="mt-3 space-y-2">
           <div v-for="t in doneTodos" :key="t.id" class="rounded-md border p-3">
             <div class="flex items-start justify-between gap-2">
               <div>
                 <div class="font-medium">{{ t.title }}</div>
                 <div v-if="t.description" class="mt-1 text-sm text-slate-600">{{ t.description }}</div>
               </div>
-              <button class="text-sm text-red-600 hover:underline" @click="remove(t)">Delete</button>
+
+              <div class="flex items-center gap-3">
+                <button class="text-sm text-slate-700 hover:underline" @click="openEdit(t)">Edit</button>
+                <button class="text-sm text-red-600 hover:underline" @click="remove(t)">Delete</button>
+              </div>
             </div>
 
             <div class="mt-3 flex gap-2">
@@ -211,8 +275,51 @@ onMounted(load);
               </button>
             </div>
           </div>
+
+          <p v-if="doneTodos.length === 0" class="mt-3 text-sm text-slate-600">No DONE todos.</p>
         </div>
       </section>
+    </div>
+
+    <!-- EDIT MODAL -->
+    <div v-if="isEditOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/40" @click="closeEdit"></div>
+
+      <div class="relative w-full max-w-lg rounded-xl border bg-white p-6 shadow-lg">
+        <div class="flex items-start justify-between">
+          <h3 class="text-lg font-semibold">Edit Todo</h3>
+          <button class="text-slate-600 hover:text-slate-900" @click="closeEdit">✕</button>
+        </div>
+
+        <div class="mt-4 space-y-3">
+          <div>
+            <label class="text-sm text-slate-600">Title</label>
+            <input
+              v-model="editTitle"
+              class="mt-1 w-full rounded-md border px-3 py-2"
+              @keyup.enter="saveEdit"
+            />
+          </div>
+
+          <div>
+            <label class="text-sm text-slate-600">Description</label>
+            <textarea v-model="editDesc" rows="4" class="mt-1 w-full rounded-md border px-3 py-2"></textarea>
+          </div>
+        </div>
+
+        <div class="mt-5 flex justify-end gap-2">
+          <button class="rounded-md border px-4 py-2 text-sm hover:bg-slate-50" @click="closeEdit">
+            Cancel
+          </button>
+          <button
+            class="rounded-md bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800 disabled:opacity-60"
+            :disabled="saving || !editTitle.trim()"
+            @click="saveEdit"
+          >
+            {{ saving ? "Saving..." : "Save" }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>

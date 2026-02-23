@@ -47,13 +47,25 @@ onMounted(load);
     <div class="rounded-xl border bg-white p-6">
       <h1 class="text-xl font-semibold">Projects</h1>
 
-      <div v-if="error" class="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+      <div
+        v-if="error"
+        class="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+      >
         {{ error }}
       </div>
 
       <div class="mt-4 flex gap-2">
-        <input v-model="name" placeholder="New project name" class="w-full rounded-md border px-3 py-2" />
-        <button class="rounded-md bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800" @click="createProject">
+        <input
+          v-model="name"
+          placeholder="New project name"
+          class="w-full rounded-md border px-3 py-2"
+          @keyup.enter="createProject"
+        />
+        <button
+          class="rounded-md bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800 disabled:opacity-60"
+          :disabled="!name.trim()"
+          @click="createProject"
+        >
           Add
         </button>
       </div>
@@ -62,23 +74,28 @@ onMounted(load);
     <div class="rounded-xl border bg-white p-6">
       <div class="flex items-center justify-between">
         <h2 class="font-semibold">Your projects</h2>
-        <span v-if="loading" class="text-sm text-slate-500">Loading...</span>
       </div>
 
-      <ul class="mt-3 divide-y">
-        <li
-          v-for="p in projects"
-          :key="p.id"
-          class="cursor-pointer py-3 hover:bg-slate-50 px-2 rounded-md"
-          @click="openProject(p)"
-        >
-          {{ p.name }}
-        </li>
-      </ul>
+      <div class="mt-3">
+        <div v-if="loading" class="rounded-md border bg-slate-50 p-4 text-sm text-slate-600">
+          Loading projects...
+        </div>
 
-      <p v-if="!loading && projects.length === 0" class="mt-3 text-sm text-slate-600">
-        No projects yet.
-      </p>
+        <div v-else-if="projects.length === 0" class="rounded-md border bg-slate-50 p-4 text-sm text-slate-600">
+          No projects yet — create your first project above.
+        </div>
+
+        <ul v-else class="divide-y">
+          <li
+            v-for="p in projects"
+            :key="p.id"
+            class="cursor-pointer rounded-md px-2 py-3 hover:bg-slate-50"
+            @click="openProject(p)"
+          >
+            {{ p.name }}
+          </li>
+        </ul>
+      </div>
     </div>
   </div>
 </template>
