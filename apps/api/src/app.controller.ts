@@ -16,6 +16,11 @@ import { CurrentUser } from "./auth/current-user";
 export class AppController {
   constructor(private readonly prisma: PrismaService) {}
 
+  @Get()
+  root() {
+    return { ok: true, service: "todo-app-pro API" };
+  }
+
   @Get("health")
   health() {
     return { ok: true };
@@ -54,7 +59,6 @@ export class AppController {
     @CurrentUser() user: { userId: string },
     @Param("projectId") projectId: string
   ) {
-    // check ownership
     const project = await this.prisma.project.findFirst({
       where: { id: projectId, ownerId: user.userId },
       select: { id: true },
@@ -101,10 +105,9 @@ export class AppController {
       description?: string;
       status?: "OPEN" | "IN_PROGRESS" | "DONE";
       priority?: number;
-      dueDate?: string; // ISO string, optional
+      dueDate?: string;
     }
   ) {
-    // ensure todo belongs to user's project
     const todo = await this.prisma.todo.findFirst({
       where: { id, project: { ownerId: user.userId } },
       select: { id: true },
@@ -119,7 +122,12 @@ export class AppController {
         status: body.status as any,
         priority: body.priority,
         dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
-        completedAt: body.status === "DONE" ? new Date() : body.status ? null : undefined,
+        completedAt:
+          body.status === "DONE"
+            ? new Date()
+            : body.status
+            ? null
+            : undefined,
       },
     });
   }
