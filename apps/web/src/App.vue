@@ -1,15 +1,30 @@
 <script setup lang="ts">
 import { clearToken, isAuthed } from "./lib/auth";
-import { computed } from "vue";
+import { ref, onMounted, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
-const authed = computed(() => isAuthed());
+
+// reactive state بدل computed
+const authed = ref(isAuthed());
+
+function syncAuth() {
+  authed.value = isAuthed();
+}
 
 function logout() {
   clearToken();
+  syncAuth();
   router.push("/login");
 }
+
+onMounted(() => {
+  window.addEventListener("auth-changed", syncAuth);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("auth-changed", syncAuth);
+});
 </script>
 
 <template>
