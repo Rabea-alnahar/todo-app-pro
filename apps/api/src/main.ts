@@ -1,14 +1,23 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Security headers
   app.use(helmet());
 
-  // CORS
+  app.use(
+    '/auth',
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 50,
+      standardHeaders: true,
+      legacyHeaders: false,
+    }),
+  );
+
   app.enableCors({
     origin: [
       'https://todo-app-pro-web.vercel.app',
